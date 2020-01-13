@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <b>Log: </b>{{ message }}
+    <br>
+{% for key, value in output %}
+<div class="row pt-3 ">
+  <div class="col-1" onclick="window.location='{{value.link}}';" style="cursor: pointer;">
+      <img src="{{ value.image }}" class="img-fluid">
+    </div>
+  <div class="col-8" onclick="window.location='{{value.link}}';" style="cursor: pointer;">
+    <h3>{{ value.title }}</h3>
+      <p>Question Created by {{ value.created_by }}</p>
+  </div>
+</div>
+{% endfor %}
+{% if output.has_other_pages %}
+  <ul class="pagination">
+    {% if output.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ output.previous_page_number }}">&laquo;</a></li>
+    {% endif %}
+    {% for i in output.paginator.page_range %}
+      {% if users.number == i %}
+        <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+      {% else %}
+        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+      {% endif %}
+    {% endfor %}
+    {% if output.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ output.next_page_number }}">&raquo;</a></li>
+    {% endif %}
+  </ul>
+{% endif %}
+{% endblock %}
