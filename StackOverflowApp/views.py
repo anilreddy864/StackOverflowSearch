@@ -4,6 +4,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, redirect
 from .StackoverflowAPI import get_questions, dateConverter
 from .forms import SearchForm
+import pytz
 
 PER_MIN_SEARCHES = 5
 SESSION_MINUTES = 1
@@ -51,12 +52,12 @@ def detail(request):
     if 'start-time' in request.session:
         start_time = request.session['start-time']
     if start_time is None:
-        request.session['start-time'] = datetime.now().strftime("%d %B %Y, %H:%M:%S:%f")
+        request.session['start-time'] = datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f")
     request.session['search-questions-post'] = request.POST
     session_time_obj = datetime.strptime(request.session['start-time'], "%d %B %Y, %H:%M:%S:%f")
     per_min_obj = session_time_obj + timedelta(minutes=SESSION_MINUTES)
     per_day_obj = session_time_obj + timedelta(minutes=SESSION_DAY_MINUTES)
-    current_time = datetime.strptime(datetime.now().strftime("%d %B %Y, %H:%M:%S:%f"), "%d %B %Y, %H:%M:%S:%f")
+    current_time = datetime.strptime(datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f"), "%d %B %Y, %H:%M:%S:%f")
     form = SearchForm()
     if request.method == 'POST':
         form = SearchForm(request.POST)
