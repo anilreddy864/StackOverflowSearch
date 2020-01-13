@@ -17,6 +17,8 @@ def delete_session(request):
         del request.session['search-questions-post']
         del request.session['start-time']
         del request.session['count']
+        cache.clear()
+        cache.close()
     except KeyError:
         pass
     return redirect('/')
