@@ -24,7 +24,7 @@ SECRET_KEY = 'et6v#fq=!jezo-64!*_$n^z%c5k284ub1-xd%vn^)tgd8=9!2v'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["35.225.21.54"]
+ALLOWED_HOSTS = ["35.225.21.54","127.0.0.1"]
 
 # Application definition
 

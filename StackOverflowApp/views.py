@@ -6,10 +6,11 @@ from .StackoverflowAPI import get_questions, dateConverter
 from .forms import SearchForm
 import pytz
 
-PER_MIN_SEARCHES = 5
+PER_MIN_SEARCHES = 2
+PER_DAY_SEARCHES = 100
 SESSION_MINUTES = 1
 SESSION_DAY_MINUTES = 24 * 60
-PER_DAY_SEARCHES = 100
+RESULTS_PER_PAGE = 10
 
 
 def delete_session(request):
@@ -43,9 +44,9 @@ def clear_cache(request):
 
 
 def detail(request):
-    global cache_key, cache_key_out
     params = {}
     output = {}
+    global cache_key, cache_key_out
     start_time = None
     if not request.method == 'POST':
         if 'search-questions-post' in request.session:
@@ -57,9 +58,12 @@ def detail(request):
         request.session['start-time'] = datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f")
     request.session['search-questions-post'] = request.POST
     session_time_obj = datetime.strptime(request.session['start-time'], "%d %B %Y, %H:%M:%S:%f")
+
+    # Getting the session time frame and current time
     per_min_obj = session_time_obj + timedelta(minutes=SESSION_MINUTES)
     per_day_obj = session_time_obj + timedelta(minutes=SESSION_DAY_MINUTES)
-    current_time = datetime.strptime(datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f"), "%d %B %Y, %H:%M:%S:%f")
+    current_time = datetime.strptime(datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f"),
+                                     "%d %B %Y, %H:%M:%S:%f")
     form = SearchForm()
     if request.method == 'POST':
         form = SearchForm(request.POST)
@@ -87,37 +91,46 @@ def detail(request):
             params['views'] = form.cleaned_data['views']
             params['wiki'] = form.cleaned_data['wiki']
             params = {k: v for k, v in params.items() if v != '' and v is not None}
-            # Calling the API
+
+            if 'count' not in request.session:
+                request.session['count'] = 0
+            # Setting Cache Keys
             if not cache.get("keys"):
                 cache.set("keys", [], None)
-                output = get_questions(params)
                 cache_key = 1
                 cache_key_out = str(cache_key) + '_out'
-                request.session['count'] = 1
-                print(cache_key, cache_key_out)
+                output = get_questions(params)
                 add_key_to_list(cache_key, cache_key_out, params, output)
+                request.session['count'] = 1
+                print('API Call', request.session['count'])
             else:
+                # Checking Cache for Output for that Session
                 for key in cache.get('keys'):
                     if params == cache.get(key):
                         output = cache.get(str(key) + '_out')
+                        print('Getting Output From Cache')
                         break
-                if output is None or output == {}:
-                    request.session['count'] = request.session['count'] + 1
-                    if current_time < per_min_obj:
-                        if request.session['count'] > PER_MIN_SEARCHES:
-                            log_msg = 'Only 5 Searches are allowed per Minute Per Session'
-                            form = SearchForm()
-                            return render(request, 'form.html', {'form': form, 'msg': log_msg})
-                    if current_time < per_day_obj:
-                        if request.session['count'] > PER_DAY_SEARCHES:
-                            log_msg = 'Only 100 Searches are allowed per Day Per Session'
-                            form = SearchForm()
-                            return render(request, 'form.html', {'form': form, 'msg': log_msg})
-                    output = get_questions(params)
-                    cache_key = cache_key + 1
-                    cache_key_out = str(cache_key) + '_out'
-                    add_key_to_list(cache_key, cache_key_out, params, output)
-            # Errors from API
+            # If Output is not in Cache
+            cache_key = max(cache.get('keys'))
+            if output is None or output == {}:
+                request.session['count'] = request.session['count'] + 1
+                if current_time < per_min_obj:
+                    if request.session['count'] > PER_MIN_SEARCHES:
+                        log_msg = 'Only ' + str(PER_MIN_SEARCHES) + ' Searches are allowed per Minute Per Session'
+                        form = SearchForm()
+                        return render(request, 'form.html', {'form': form, 'msg': log_msg})
+                if current_time < per_day_obj:
+                    if request.session['count'] > PER_DAY_SEARCHES:
+                        log_msg = 'Only ' + str(PER_DAY_SEARCHES) + ' Searches are allowed per Day Per Session'
+                        form = SearchForm()
+                        return render(request, 'form.html', {'form': form, 'msg': log_msg})
+                output = get_questions(params)
+                print('API Call', request.session['count'])
+                cache_key = cache_key + 1
+                cache_key_out = str(cache_key) + '_out'
+                add_key_to_list(cache_key, cache_key_out, params, output)
+
+            # If errors from API
             if 'error_id' in output.keys():
                 log_msg = output['error_message']
                 form = SearchForm()
@@ -126,9 +139,10 @@ def detail(request):
                 log_msg = 'No Data Found for Query Combination'
                 form = SearchForm()
                 return render(request, 'form.html', {'form': form, 'msg': log_msg})
+
             # Pagination
             t = tuple(output.items())
-            paginator = Paginator(t, 10)
+            paginator = Paginator(t, RESULTS_PER_PAGE)
             page_number = request.GET.get('page')
             try:
                 page_obj = paginator.page(page_number)

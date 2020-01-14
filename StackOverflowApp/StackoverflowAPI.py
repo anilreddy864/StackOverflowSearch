@@ -8,14 +8,12 @@ def get_questions(params):
     params = {k: v for k, v in params.items() if v != '' and v is not None}
     params['site'] = 'stackoverflow'
     print('Calling API')
-    print(params)
     r = requests.get(BASEURL, params=params)
     if 'items' not in r.json():
         print(r.json)
         return r.json()
     op = r.json()['items']
     output_dict = {}
-    inner_dict = {}
     for i in range(len(op)):
         inner_dict = {}
         key = op[i]['question_id']
