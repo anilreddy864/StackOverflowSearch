@@ -1,15 +1,13 @@
 from datetime import datetime, timedelta
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render, redirect
 from .StackoverflowAPI import get_questions, dateConverter
 from .forms import SearchForm
+from ratelimit import RateLimitException
 import pytz
 
-PER_MIN_SEARCHES = 2
-PER_DAY_SEARCHES = 100
-SESSION_MINUTES = 1
-SESSION_DAY_MINUTES = 24 * 60
+
 RESULTS_PER_PAGE = 10
 
 
@@ -55,23 +53,17 @@ def detail(request):
     if 'start-time' in request.session:
         start_time = request.session['start-time']
     if start_time is None:
-        request.session['start-time'] = datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f")
+        request.session['start-time'] = get_current_time()
     request.session['search-questions-post'] = request.POST
-    session_time_obj = datetime.strptime(request.session['start-time'], "%d %B %Y, %H:%M:%S:%f")
 
-    # Getting the session time frame and current time
-    per_min_obj = session_time_obj + timedelta(minutes=SESSION_MINUTES)
-    per_day_obj = session_time_obj + timedelta(minutes=SESSION_DAY_MINUTES)
-    current_time = datetime.strptime(datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f"),
-                                     "%d %B %Y, %H:%M:%S:%f")
     form = SearchForm()
     if request.method == 'POST':
         form = SearchForm(request.POST)
         if form.is_valid():
             params['page'] = form.cleaned_data['page']
             params['pagesize'] = form.cleaned_data['pagesize']
-            params['from_date'] = dateConverter(form.cleaned_data['from_date'])
-            params['to_date'] = dateConverter(form.cleaned_data['to_date'])
+            params['fromdate'] = dateConverter(form.cleaned_data['from_date'])
+            params['todate'] = dateConverter(form.cleaned_data['to_date'])
             params['order'] = form.cleaned_data['order']
             params['min'] = dateConverter(form.cleaned_data['min'])
             params['max'] = dateConverter(form.cleaned_data['max'])
@@ -91,7 +83,6 @@ def detail(request):
             params['views'] = form.cleaned_data['views']
             params['wiki'] = form.cleaned_data['wiki']
             params = {k: v for k, v in params.items() if v != '' and v is not None}
-
             if 'count' not in request.session:
                 request.session['count'] = 0
             # Setting Cache Keys
@@ -99,10 +90,15 @@ def detail(request):
                 cache.set("keys", [], None)
                 cache_key = 1
                 cache_key_out = str(cache_key) + '_out'
-                output = get_questions(params)
+                try:
+                    output = get_questions(params)
+                except RateLimitException as e:
+                    log_msg = e.args[0] + ' Please try in ' + str(e.period_remaining) + ' Seconds'
+                    return render(request, 'form.html', {'form': form, 'msg': log_msg})
                 add_key_to_list(cache_key, cache_key_out, params, output)
                 request.session['count'] = 1
                 print('API Call', request.session['count'])
+                request.session['search_time'] = get_current_time()
             else:
                 # Checking Cache for Output for that Session
                 for key in cache.get('keys'):
@@ -110,21 +106,16 @@ def detail(request):
                         output = cache.get(str(key) + '_out')
                         print('Getting Output From Cache')
                         break
+
             # If Output is not in Cache
             cache_key = max(cache.get('keys'))
             if output is None or output == {}:
                 request.session['count'] = request.session['count'] + 1
-                if current_time < per_min_obj:
-                    if request.session['count'] > PER_MIN_SEARCHES:
-                        log_msg = 'Only ' + str(PER_MIN_SEARCHES) + ' Searches are allowed per Minute Per Session'
-                        form = SearchForm()
-                        return render(request, 'form.html', {'form': form, 'msg': log_msg})
-                if current_time < per_day_obj:
-                    if request.session['count'] > PER_DAY_SEARCHES:
-                        log_msg = 'Only ' + str(PER_DAY_SEARCHES) + ' Searches are allowed per Day Per Session'
-                        form = SearchForm()
-                        return render(request, 'form.html', {'form': form, 'msg': log_msg})
-                output = get_questions(params)
+                try:
+                    output = get_questions(params)
+                except RateLimitException as e:
+                    log_msg = e.args[0] + ' Please try in ' + str(e.period_remaining) + ' Seconds'
+                    return render(request, 'form.html', {'form': form, 'msg': log_msg})
                 print('API Call', request.session['count'])
                 cache_key = cache_key + 1
                 cache_key_out = str(cache_key) + '_out'
@@ -165,3 +156,7 @@ def add_key_to_list(cache_key, cache_key_out, params, output):
         keys_list = cache.get("keys")
         keys_list.append(cache_key)
         cache.set("keys", keys_list, None)
+
+
+def get_current_time():
+    return datetime.now(pytz.timezone('Asia/Calcutta')).strftime("%d %B %Y, %H:%M:%S:%f")

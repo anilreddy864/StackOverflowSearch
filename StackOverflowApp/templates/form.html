@@ -1,10 +1,94 @@
 {% extends 'base.html' %}
 
+{% load crispy_forms_tags %}
 {% block content %}
     <b>Log Message: </b>{{ msg }}
     <br>
     </br>
-{% load crispy_forms_tags %}
+    <form method="post">
     {% csrf_token %}
-{% crispy form %}
+    <div class="form-row">
+        <div class="form-group col-md-1 mb-0">
+            {{ form.page |as_crispy_field }}
+        </div>
+        <div class="form-group col-md-1 mb-0">
+            {{ form.pagesize|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.from_date|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.to_date|as_crispy_field }}
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-2 mb-0">
+            {{ form.order |as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.min|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.max|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.sort|as_crispy_field }}
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-2 mb-0">
+            {{ form.q |as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.accepted|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.answers|as_crispy_field }}
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-2 mb-0">
+            {{ form.body |as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.closed|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.migrated|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.notice|as_crispy_field }}
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-2 mb-0">
+            {{ form.nottagged |as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.tagged|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.title|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.user|as_crispy_field }}
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group col-md-2 mb-0">
+            {{ form.url |as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.views|as_crispy_field }}
+        </div>
+        <div class="form-group col-md-2 mb-0">
+            {{ form.wiki|as_crispy_field }}
+        </div>
+    </div>
+        <div class="form-row">
+            <div class="form-group col-md-2 mb-0">
+        <input type="submit" name="search" value="SEARCH" class="btn btn-primary" id="submit-id-search" />
+        </div>
+        </div>
+
 {% endblock %}

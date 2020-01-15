@@ -1,9 +1,17 @@
 import requests
 import datetime
+from ratelimit import limits
 
 BASEURL = "https://api.stackexchange.com/2.2/search/advanced"
 
+PER_MIN_SEARCHES = 2
+PER_DAY_SEARCHES = 100
+SESSION_MINUTES = 1 * 60
+SESSION_DAY_MINUTES = 24 * 60 * 60
 
+
+@limits(calls=PER_MIN_SEARCHES, period=SESSION_MINUTES)
+@limits(calls=PER_DAY_SEARCHES, period=SESSION_DAY_MINUTES)
 def get_questions(params):
     params = {k: v for k, v in params.items() if v != '' and v is not None}
     params['site'] = 'stackoverflow'
