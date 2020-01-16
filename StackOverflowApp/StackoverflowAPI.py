@@ -4,7 +4,7 @@ from ratelimit import limits
 
 BASEURL = "https://api.stackexchange.com/2.2/search/advanced"
 
-PER_MIN_SEARCHES = 2
+PER_MIN_SEARCHES = 5
 PER_DAY_SEARCHES = 100
 SESSION_MINUTES = 1 * 60
 SESSION_DAY_MINUTES = 24 * 60 * 60
